@@ -21,7 +21,7 @@ double Pid::PidCalc(const double error, const double sample_time) {
     error_[2] = error_[1];
     error_[1] = error_[0];
     last_output_ += delta_output;
-    return delta_output;
+    return last_output_;
   } catch (double time) {
     std::cerr << "Error: sample time is " << time << std::endl;
     return 0;
