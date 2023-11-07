@@ -6,6 +6,7 @@
 #define COMMON_CODES_FILTERS_FIRST_ORDER_H_
 
 class FirstOrder {
+ public:
   FirstOrder(double sample_period, double time_constant) {
     sample_period_ = sample_period;
     time_constant_ = time_constant;
