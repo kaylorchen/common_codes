@@ -17,6 +17,10 @@ class Timeout {
     if (elapsed.count() >= timeout_) { return true; }
     return false;
   }
+  void set_timeout(unsigned long int timeout){
+    timeout_ = timeout;
+    start_ = std::chrono::steady_clock::now();
+  }
  private:
   unsigned long int timeout_;
   std::chrono::steady_clock::time_point start_;
