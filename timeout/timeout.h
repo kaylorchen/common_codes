@@ -14,7 +14,7 @@ class Timeout {
     end_ = std::chrono::steady_clock::now();
     auto elapsed =
         std::chrono::duration_cast<std::chrono::milliseconds>(end_ - start_);
-    if (elapsed.count() >= timeout_) { return true; }
+    if (static_cast<unsigned long int>(elapsed.count()) >= timeout_) { return true; }
     return false;
   }
   void set_timeout(unsigned long int timeout){
