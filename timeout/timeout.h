@@ -2,29 +2,24 @@
 // Created by kaylor chen on 2023/11/14.
 //
 
-#ifndef TIMEOUT__TIMEOUT_H_
-#define TIMEOUT__TIMEOUT_H_
+#pragma once
 #include <chrono>
 class Timeout {
  public:
-  Timeout(unsigned long int timeout) : timeout_(timeout) {
+  Timeout(std::chrono::microseconds timeout) : timeout_(timeout) {
     start_ = std::chrono::steady_clock::now();
   }
   bool isTimeout() {
-    end_ = std::chrono::steady_clock::now();
     auto elapsed =
-        std::chrono::duration_cast<std::chrono::milliseconds>(end_ - start_);
-    if (static_cast<unsigned long int>(elapsed.count()) >= timeout_) { return true; }
+        std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - start_);
+    if (elapsed >= timeout_) { return true; }
     return false;
   }
-  void set_timeout(unsigned long int timeout){
+  void set_timeout(std::chrono::microseconds timeout) {
     timeout_ = timeout;
     start_ = std::chrono::steady_clock::now();
   }
  private:
-  unsigned long int timeout_;
+  std::chrono::microseconds timeout_;
   std::chrono::steady_clock::time_point start_;
-  std::chrono::steady_clock::time_point end_;
 };
-
-#endif //TIMEOUT__TIMEOUT_H_

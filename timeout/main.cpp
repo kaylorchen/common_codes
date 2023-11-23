@@ -6,9 +6,9 @@
 #include <chrono>
 #include <iomanip>
 #include <thread>
-
+//using namespace std::chrono_literals;
 int main() {
-  Timeout timeout(5000);
+  Timeout timeout(std::chrono::milliseconds(10000));
   while(!timeout.isTimeout()){
     auto now = std::chrono::system_clock::now();
     std::time_t now_time = std::chrono::system_clock::to_time_t(now);
