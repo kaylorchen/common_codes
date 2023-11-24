@@ -4,22 +4,22 @@
 
 #pragma once
 #include <chrono>
+template<typename T>
 class Timeout {
  public:
-  Timeout(std::chrono::microseconds timeout) : timeout_(timeout) {
+  Timeout(const T &timeout) : timeout_(timeout) {
     start_ = std::chrono::steady_clock::now();
   }
   bool isTimeout() {
-    auto elapsed =
-        std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - start_);
+    auto elapsed = std::chrono::duration_cast<T>(std::chrono::steady_clock::now() - start_);
     if (elapsed >= timeout_) { return true; }
     return false;
   }
-  void set_timeout(std::chrono::microseconds timeout) {
+  void set_timeout(const T &timeout) {
     timeout_ = timeout;
     start_ = std::chrono::steady_clock::now();
   }
  private:
-  std::chrono::microseconds timeout_;
+  T timeout_;
   std::chrono::steady_clock::time_point start_;
 };
