@@ -48,3 +48,17 @@ void FisheyeCamera::Refresh() {
     }
   }
 }
+
+std::shared_ptr<cv::Mat> FisheyeCamera::GetRgbFrame() {
+  cv::Mat frame;
+  cv::Mat undistortedImage;
+  capture_ >> frame;
+  if (frame.empty()) {
+    KAYLORDUT_LOG_WARN("frame is empty");
+    return nullptr;
+  }
+  cv::remap(frame, undistortedImage, map1_, map2_, cv::INTER_LINEAR);
+  auto tmp = std::make_shared<cv::Mat>();
+  cv::cvtColor(undistortedImage, *tmp, cv::COLOR_BGR2RGB);
+  return std::move(tmp);
+}
