@@ -62,3 +62,42 @@ std::shared_ptr<cv::Mat> FisheyeCamera::GetRgbFrame() {
   cv::cvtColor(undistortedImage, *tmp, cv::COLOR_BGR2RGB);
   return std::move(tmp);
 }
+
+std::shared_ptr<cv::Mat> FisheyeCamera::GetRgbFrame(int &&derired_size) {
+  cv::Mat frame;
+  cv::Mat undistortedImage;
+  capture_ >> frame;
+  if (frame.empty()) {
+    KAYLORDUT_LOG_WARN("frame is empty");
+    return nullptr;
+  }
+  cv::remap(frame, undistortedImage, map1_, map2_, cv::INTER_LINEAR);
+  // 计算新的宽度和高度保持相同的宽高比
+  int desired_size = 640;
+  int new_width, new_height;
+  if (undistortedImage.rows > undistortedImage.cols) {
+    new_height = desired_size;
+    new_width = undistortedImage.cols * desired_size / undistortedImage.rows;
+  } else {
+    new_width = desired_size;
+    new_height = undistortedImage.rows * desired_size / undistortedImage.cols;
+  }
+  // 首先缩放图像
+  cv::Mat scaledImage;
+  cv::resize(undistortedImage, scaledImage, cv::Size(new_width, new_height));
+
+  // 然后创建一个640x640的空白图像
+  cv::Mat squareImage =
+      cv::Mat::zeros(desired_size, desired_size, undistortedImage.type());
+
+  // 计算中心位置进行粘贴
+  int x_offset = (desired_size - new_width) / 2;
+  int y_offset = (desired_size - new_height) / 2;
+
+  // 粘贴缩放后的图像到中心
+  scaledImage.copyTo(squareImage(
+      cv::Rect(x_offset, y_offset, scaledImage.cols, scaledImage.rows)));
+  auto tmp = std::make_shared<cv::Mat>();
+  cv::cvtColor(squareImage, *tmp, cv::COLOR_BGR2RGB);
+  return std::move(tmp);
+}

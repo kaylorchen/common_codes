@@ -10,6 +10,7 @@ int main() {
       (cv::Mat_<double>(4, 1) << -0.09556402717747697, 0.012374049436718767,
        -0.010465758469831311, 0.0033159128053917544);
   FisheyeCamera fisheye_camera(0, K, D);
-  fisheye_camera.Refresh();
+//  fisheye_camera.Refresh();
+  cv::imwrite("test.jpg", *fisheye_camera.GetRgbFrame(640));
   return 0;
 }
