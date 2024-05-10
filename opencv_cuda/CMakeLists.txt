@@ -14,4 +14,4 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 find_package(spdlog REQUIRED)
 
 add_executable(opencv_cuda main.cpp )
-target_link_libraries(opencv_cuda ${OpenCV_LIBS} ${CUDA_LIBRARIES} spdlog::spdlog systemd)
+target_link_libraries(opencv_cuda ${OpenCV_LIBS} ${CUDA_LIBRARIES} spdlog::spdlog systemd ${CUDA_cublas_LIBRARY})
