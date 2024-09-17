@@ -4,6 +4,7 @@
 #include "kaylordut/log/logger.h"
 #include "opencv2/opencv.hpp"
 #include "iostream"
+#include "matmul_cublas.h"
 
 template <typename T, int channels>
 cv::Mat matmul1(const cv::Mat &a, const cv::Mat &b,
@@ -78,7 +79,7 @@ cv::Mat matmul2(const cv::Mat &a, const cv::Mat &b,
   }
   return c;
 }
-int A_rows = 200;
+int A_rows = 20;
 int A_cols = 10000;
 int B_rows = A_cols;
 int B_cols = 300;
@@ -90,10 +91,13 @@ int main(int argc, char **argv){
   cv::randu(B, cv::Scalar::all(0), cv::Scalar::all(1));
   cv::Mat C;
   cv::Mat D;
+  cv::Mat E;
   auto func1 = [&](){C = matmul1<float, 1>(A, B);};
   auto func2 = [&](){D = matmul2<float, 1>(A, B);};
+  auto func3 = [&](){E = gpuMatrixMultiply(A, B);};
   KAYLORDUT_TIME_COST_INFO("Matmul1", func1());
   KAYLORDUT_TIME_COST_INFO("Matmul2", func2());
-//  std::cout << C << std::endl << D << std::endl;
+  KAYLORDUT_TIME_COST_INFO("Matmul with cuda", func3());
+//  std::cout << C << std::endl << D << std::endl << E<< std::endl;
   return 0;
 }
