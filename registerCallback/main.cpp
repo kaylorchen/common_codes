@@ -64,6 +64,31 @@ void callbackFunction3(const std::string s, int n, double f) {
   std::cout << "CallbackFunction3 called with: " << s << ", " << n << ", " << f << std::endl;
 }
 
+class A{
+ public:
+  void init(){
+    Register::CallbackFunction<std::string> fun = [this](std::string name){this->Print(name);};
+    reg_.RegisterCallback("test", fun);
+    reg_.RunCallback<std::string>("test", "this is a test");
+    std::string test = "1111";
+    reg_.RunCallback<std::string>("test", test);
+    Register::CallbackFunction<std::shared_ptr<int>> fun2 = [this](std::shared_ptr<int> a){this->Test(a);};
+    reg_.RegisterCallback("Test", fun2);
+    data_ = std::make_shared<int>(5);
+    reg_.RunCallback<std::shared_ptr<int>>("Test", data_);
+  }
+  void Print(std::string &name){
+    std::cout << name << std::endl;
+  }
+
+  void Test(std::shared_ptr<int> data){
+    std::cout << *data << std::endl;
+  }
+ private:
+  Register reg_;
+  std::shared_ptr<int> data_;
+};
+
 int main() {
   Register reg;
 
@@ -86,5 +111,7 @@ int main() {
   // 尝试运行一个未注册的回调函数
   reg.RunCallback("callback4", 42);
 
+  A test;
+  test.init();
   return 0;
 }
