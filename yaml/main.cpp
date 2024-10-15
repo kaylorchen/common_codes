@@ -25,5 +25,13 @@ int main() {
   }
   parse_vector<int>(config, "numbers");
   parse_vector<std::string>(config, "strings");
+  if (config["class"]) {
+    std::cout << "Class: " << config["class"] << std::endl;
+    const auto &classes = config["class"];
+    if (classes.IsMap())
+    {
+      std::cout << "this is a map" << std::endl;
+    }
+  }
   return 0;
 }

@@ -4,3 +4,7 @@ strings:
   - This is a test
   - This is Kaylor
   - This is Di
+class:
+  1: "This is a test"
+  2: "This is Kaylor"
+  3: "This is Di"
