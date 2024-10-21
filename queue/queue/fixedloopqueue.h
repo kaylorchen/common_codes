@@ -8,6 +8,7 @@
 
 #include "queue.h"
 #include "iostream"
+#include <mutex>
 
 template<class T>
 class FixedLoopQueue : public Queue<T> {
@@ -19,15 +20,18 @@ class FixedLoopQueue : public Queue<T> {
     size_ = front_ = rear_ = 0;
   }
 
-  int size() {
+  int Size() {
+    std::lock_guard<std::mutex> lock(queue_mutex_);
     return size_;
   }
 
   bool IsEmpty() {
+    std::lock_guard<std::mutex> lock(queue_mutex_);
     return size_ == 0;
   }
 
   T *Element(unsigned int index) {
+    std::lock_guard<std::mutex> lock(queue_mutex_);
     if (index > size_ - 1) {
       std::cout << "error: queue index is out of bounds" << std::endl;
       return nullptr;
@@ -37,6 +41,7 @@ class FixedLoopQueue : public Queue<T> {
 
   //入队操作
   void Enqueue(T& num) {
+    std::lock_guard<std::mutex> lock(queue_mutex_);
     data_[rear_] = num;
     /*定长可覆盖循环队列，size增长到容量上限就不再增长*/
     if(size_ < capacity_){
@@ -47,6 +52,7 @@ class FixedLoopQueue : public Queue<T> {
 
   //出队操作
   void Dequeue() {
+    std::lock_guard<std::mutex> lock(queue_mutex_);
     if (size_ <= 0) {
       std::cerr << "Error: Dequeue is empty" << std::endl;
       return;
@@ -57,6 +63,7 @@ class FixedLoopQueue : public Queue<T> {
 
   //获得队首元素
   T *Front() {
+    std::lock_guard<std::mutex> lock(queue_mutex_);
     if (size_ <= 0) {
       std::cerr << "Error: Dequeue is empty" << std::endl;
       return nullptr;
@@ -66,6 +73,7 @@ class FixedLoopQueue : public Queue<T> {
 
   //获得队尾元素
   T *Rear() {
+    std::lock_guard<std::mutex> lock(queue_mutex_);
     if (size_ <= 0) {
       std::cerr << "Error: Dequeue is empty" << std::endl;
       return nullptr;
@@ -79,6 +87,7 @@ class FixedLoopQueue : public Queue<T> {
   int size_;
   int front_;
   int rear_;
+  std::mutex queue_mutex_;
 };
 
 #endif //QUEUE_FIXEDLOOPQUEUE_H_

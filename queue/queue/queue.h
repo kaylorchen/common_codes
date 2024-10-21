@@ -8,7 +8,7 @@
 template<class T>
 class Queue {
 public:
-    virtual int size() = 0;
+    virtual int Size() = 0;
 
     virtual bool IsEmpty() = 0;
 
