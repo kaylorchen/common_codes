@@ -5,196 +5,56 @@
 #include "systemd_manager.h"
 
 #include "kaylordut/log/logger.h"
+#include "systemd/sd-bus.h"
 
-#define CHECK_DBUS_ERROR(err, msg)                   \
-  if (dbus_error_is_set(&err)) {                     \
-    KAYLORDUT_LOG_ERROR("{}: {}", msg, err.message); \
-    dbus_error_free(&err);                           \
-    return false;                                    \
+int SystemdManager::ControlService(const std::string service,
+                                   const char* method) {
+  sd_bus_error error = SD_BUS_ERROR_NULL;
+  sd_bus_message* reply = nullptr;
+  sd_bus* bus = nullptr;
+
+  // 1. 连接系统总线
+  int ret = sd_bus_open_system(&bus);
+  if (ret < 0) {
+    std::cerr << "Bus connection error: " << strerror(-ret) << std::endl;
+    return ret;
   }
 
-bool SystemdManager::CallMethod(const std::string& path,
-                                const std::string& interface,
-                                const std::string& method, const char* arg_type,
-                                void* arg) {
-  DBusError err;
-  dbus_error_init(&err);
+  // 2. 构造 D-Bus 调用
+  auto service_full_name = std::string(service)+".service";
+  ret = sd_bus_call_method(bus,
+                           "org.freedesktop.systemd1",          // 目标
+                           "/org/freedesktop/systemd1",         // 路径
+                           "org.freedesktop.systemd1.Manager",  // 接口
+                           method,  // 方法: "StartUnit" 或 "StopUnit"
+                           &error, &reply,
+                           "ss",             // 参数类型: 两个字符串
+                           service_full_name.c_str(),  // 服务名
+                           "replace"         // 模式: 替换现有任务
+  );
 
-  DBusMessage* msg =
-      dbus_message_new_method_call("org.freedesktop.systemd1", path.c_str(),
-                                   interface.c_str(), method.c_str());
-  if (arg_type && arg) {
-    dbus_message_append_args(msg, dbus_message_type_from_string(arg_type), arg,
-                             DBUS_TYPE_INVALID);
-  }
-  DBusMessage* reply =
-      dbus_connection_send_with_reply_and_block(conn_, msg, 5000, &err);
-  CHECK_DBUS_ERROR(err, "DBus call failed");
-  bool success = (dbus_message_get_type(reply) != DBUS_MESSAGE_TYPE_ERROR);
-  if (!success) {
-    KAYLORDUT_LOG_ERROR("Operation failed: {}",
-                        dbus_message_get_error_name(reply));
-  }
-  dbus_message_unref(msg);
-  dbus_message_unref(reply);
-  return success;
-}
-
-std::string SystemdManager::GetProperty(const std::string& unit_path,
-                                        const std::string& property) {
-  DBusError err;
-  dbus_error_init(&err);
-
-  DBusMessage* msg = dbus_message_new_method_call(
-      "org.freedesktop.systemd1", unit_path.c_str(),
-      "org.freedesktop.DBus.Properties", "Get");
-
-  const char* interface = "org.freedesktop.systemd1.Unit";
-  const char* prop = property.c_str();
-
-  dbus_message_append_args(msg, DBUS_TYPE_STRING, &interface, DBUS_TYPE_STRING,
-                           &prop, DBUS_TYPE_INVALID);
-
-  DBusMessage* reply =
-      dbus_connection_send_with_reply_and_block(conn_, msg, 5000, &err);
-
-  CHECK_DBUS_ERROR(err, "Failed to get property");
-
-  std::string result;
-  DBusMessageIter iter, variant_iter;
-  dbus_message_iter_init(reply, &iter);
-  dbus_message_iter_recurse(&iter, &variant_iter);
-
-  const char* value;
-  dbus_message_iter_get_basic(&variant_iter, &value);
-  result = value;
-
-  dbus_message_unref(msg);
-  dbus_message_unref(reply);
-
-  return result;
-}
-
-SystemdManager::SystemdManager() {
-  DBusError err;
-  dbus_error_init(&err);
-  conn_ = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
-  if (dbus_error_is_set(&err)) {
-    std::cerr << "Failed to connect to system bus: " << err.message
-              << std::endl;
-    dbus_error_free(&err);
-    exit(1);
-  }
-}
-
-SystemdManager::~SystemdManager() {
-  if (conn_) {
-    dbus_connection_unref(conn_);
-  }
-}
-
-std::string SystemdManager::GetUnitPath(const std::string& service_name) {
-  return "/org/freedesktop/systemd1/unit/" +
-         (service_name.find('.') != std::string::npos
-              ? service_name
-              : service_name + ".service");
-}
-
-bool SystemdManager::StartService(const std::string& service_name) {
-  std::string unit_path = GetUnitPath(service_name);
-  const char* mode = "replace";
-  return CallMethod(unit_path, "org.freedesktop.systemd1.Unit", "Start",
-                    DBUS_TYPE_STRING_AS_STRING, &mode);
-}
-
-bool SystemdManager::StopService(const std::string& service_name) {
-  std::string unit_path = GetUnitPath(service_name);
-  const char* mode = "replace";
-  return CallMethod(unit_path, "org.freedesktop.systemd1.Unit", "Stop",
-                    DBUS_TYPE_STRING_AS_STRING, &mode);
-}
-
-bool SystemdManager::RestartService(const std::string& service_name) {
-  std::string unit_path = GetUnitPath(service_name);
-  const char* mode = "replace";
-  return CallMethod(unit_path, "org.freedesktop.systemd1.Unit", "Restart",
-                    DBUS_TYPE_STRING_AS_STRING, &mode);
-}
-
-bool SystemdManager::EnableService(const std::string& service_name) {
-  std::vector<const char*> units = {service_name.c_str()};
-  const char* mode = "replace";
-  const char* enable = "1";
-
-  DBusMessage* msg = dbus_message_new_method_call(
-      "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
-      "org.freedesktop.systemd1.Manager", "EnableUnitFiles");
-
-  dbus_message_append_args(msg, DBUS_TYPE_ARRAY, DBUS_TYPE_STRING_AS_STRING,
-                           &units, 1, DBUS_TYPE_BOOLEAN, &enable,
-                           DBUS_TYPE_STRING, &mode, DBUS_TYPE_INVALID);
-
-  DBusError err;
-  dbus_error_init(&err);
-
-  DBusMessage* reply =
-      dbus_connection_send_with_reply_and_block(conn_, msg, 5000, &err);
-
-  CHECK_DBUS_ERROR(err, "Failed to enable service");
-
-  bool success = (dbus_message_get_type(reply) != DBUS_MESSAGE_TYPE_ERROR);
-
-  if (success) {
-    // Reload systemd configuration
-    success = CallMethod("/org/freedesktop/systemd1",
-                         "org.freedesktop.systemd1.Manager", "Reload");
+  // 3. 处理结果
+  if (ret < 0) {
+    std::cerr << method << " failed: " << error.message << std::endl;
+  } else {
+    std::cout << "Success: " << method << std::endl;
   }
 
-  dbus_message_unref(msg);
-  dbus_message_unref(reply);
-
-  return success;
+  // 4. 清理资源
+  sd_bus_error_free(&error);
+  sd_bus_message_unref(reply);
+  sd_bus_unref(bus);
+  return ret;
 }
 
-bool SystemdManager::DisableService(const std::string& service_name) {
-  std::vector<const char*> units = {service_name.c_str()};
-
-  DBusMessage* msg = dbus_message_new_method_call(
-      "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
-      "org.freedesktop.systemd1.Manager", "DisableUnitFiles");
-
-  dbus_message_append_args(msg, DBUS_TYPE_ARRAY, DBUS_TYPE_STRING_AS_STRING,
-                           &units, 1, DBUS_TYPE_BOOLEAN, "0",
-                           DBUS_TYPE_INVALID);
-
-  DBusError err;
-  dbus_error_init(&err);
-
-  DBusMessage* reply =
-      dbus_connection_send_with_reply_and_block(conn_, msg, 5000, &err);
-
-  CHECK_DBUS_ERROR(err, "Failed to disable service");
-
-  bool success = (dbus_message_get_type(reply) != DBUS_MESSAGE_TYPE_ERROR);
-
-  if (success) {
-    // Reload systemd configuration
-    success = CallMethod("/org/freedesktop/systemd1",
-                         "org.freedesktop.systemd1.Manager", "Reload");
-  }
-
-  dbus_message_unref(msg);
-  dbus_message_unref(reply);
-
-  return success;
+int SystemdManager::Start(std::string service) {
+  return ControlService(service.c_str(), "StartUnit");
 }
 
-std::map<std::string, std::string> SystemdManager::GetserviceStatus(
-    const std::string& service_name) {
-  std::string unit_path = GetUnitPath(service_name);
-  std::map<std::string, std::string> status;
-  status["ActiveState"] = GetProperty(unit_path, "ActiveState");
-  status["SubState"] = GetProperty(unit_path, "SubState");
-  status["UnitFileState"] = GetProperty(unit_path, "UnitFileState");
-  return status;
+int SystemdManager::Stop(std::string service) {
+  return ControlService(service.c_str(), "StopUnit");
+}
+
+int SystemdManager::Restart(std::string service) {
+  return ControlService(service.c_str(), "RestartUnit");
 }
